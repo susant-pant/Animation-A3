@@ -1,14 +1,14 @@
 #include "mass.h"
 
 void Mass::addSpringForce(vec3 springForce) {
-	netForce += springForce;
+	netForce += springForce * mass;
 }
 
 void Mass::updatePos() {
 	if(!fixed){
 		vec3 accel = (netForce/mass);
-		velocity += accel/600.f;
-		pos += velocity/600.f;
+		velocity += accel/100000.f;
+		pos += velocity/100000.f;
 	}
 }
 	/*

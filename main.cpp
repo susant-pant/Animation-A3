@@ -26,7 +26,7 @@
 #include <GLFW/glfw3.h>
 
 #include "camera.h"
-#include "mass.h"
+#include "spring.h"
 
 #define PI 3.14159265359
 
@@ -51,6 +51,7 @@ GLFWwindow* window = 0;
 mat4 winRatio = mat4(1.f);
 
 vector<Mass> masses;
+vector<Spring> springs;
 
 // --------------------------------------------------------------------------
 // GLFW callback functions
@@ -262,7 +263,7 @@ GLFWwindow* createGLFWWindow()
 // PROGRAM ENTRY POINT
 
 int main(int argc, char *argv[])
-{   
+{
     window = createGLFWWindow();
     if(window == NULL)
     	return -1;
@@ -295,7 +296,9 @@ int main(int argc, char *argv[])
 	vector<vec3> points;
 
 	masses.push_back(Mass(1.f, vec3(0.f, 4.8f, -5.f), true));
-	masses.push_back(Mass(1.f, vec3(0.f, 4.8f, -5.f), false));
+	masses.push_back(Mass(1.f, vec3(0.f, 2.f, -5.f), false));
+
+    springs.push_back(Spring(&masses[0], &masses[1], 15.f, 1.8f));
 
 	Camera cam = Camera(vec3(0, 0, -1), vec3(0, 0, 1));
 	activeCamera = &cam;
@@ -311,6 +314,12 @@ int main(int argc, char *argv[])
 
 		drawConnection(&points, 1.f);
 		loadBuffer(vbo, points);
+
+        for(int i = 0; i < springs.size(); i++){
+            vec3 springForce = springs[i].findSpringForce();
+            springs[i].mass1->addSpringForce(-1.f * springForce);
+            springs[i].mass2->addSpringForce(springForce);
+        }
 		for(int i = 0; i < masses.size(); i++){
 			masses[i].updatePos();
 		}
@@ -398,8 +407,7 @@ string LoadSource(const string &filename)
         input.close();
     }
     else {
-        cout << "ERROR: Could not load shader source from file "
-             << filename << endl;
+        cout << "ERROR: Could not load shader source from file " << filename << endl;
     }
 
     return source;
@@ -425,7 +433,7 @@ GLuint CompileShader(GLenum shaderType, const string &source)
         glGetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &length);
         string info(length, ' ');
         glGetShaderInfoLog(shaderObject, info.length(), &length, &info[0]);
-        cout << "ERROR compiling shader:" << endl << endl;
+        cout << "ERROR compiling shader:" << endl;
         cout << source << endl;
         cout << info << endl;
     }
