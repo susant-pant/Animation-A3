@@ -296,14 +296,14 @@ int main(int argc, char *argv[])
 	vector<vec3> points;
 
 	masses.push_back(Mass(1.f, vec3(0.f, 4.8f, -5.f), true));
-	masses.push_back(Mass(1.f, vec3(0.f, 2.f, -5.f), false));
+	masses.push_back(Mass(1.f, vec3(0.4f, 4.5f, -5.f), false));
 
-    springs.push_back(Spring(&masses[0], &masses[1], 15.f, 1.8f));
+    springs.push_back(Spring(&masses[0], &masses[1], 16.f, 0.1f));
 
 	Camera cam = Camera(vec3(0, 0, -1), vec3(0, 0, 1));
 	activeCamera = &cam;
 	//float fovy, float aspect, float zNear, float zFar
-	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 20.f);
+	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 1.f, 20.f);
 
     // run an event-triggered main loop
     while (!glfwWindowShouldClose(window))
