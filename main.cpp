@@ -209,7 +209,6 @@ bool loadUniforms(GLuint program, mat4 perspective, mat4 modelview)
 void render(GLuint vao, int startElement, int numElements)
 {
 	glBindVertexArray(vao);		//Use the LINES vertex array
-
 	glDrawArrays(
 			GL_LINES,		//What shape we're drawing	- GL_TRIANGLES, GL_LINES, GL_POINTS, GL_QUADS, GL_TRIANGLE_STRIP
 			startElement,
@@ -222,8 +221,10 @@ void render(GLuint vao, int startElement, int numElements)
 void drawConnection(vector<vec3>* vertices, float width)
 {
 	vertices->clear();
-	vertices->push_back(masses[0].pos);
-	vertices->push_back(masses[1].pos);
+	for(uint i = 0; i < springs.size(); i++){
+		vertices->push_back(springs[i].mass1->pos);
+		vertices->push_back(springs[i].mass2->pos);
+	}
 }
 
 GLFWwindow* createGLFWWindow()
@@ -295,10 +296,14 @@ int main(int argc, char *argv[])
 	//Geometry information
 	vector<vec3> points;
 
-	masses.push_back(Mass(1.f, vec3(0.f, 4.8f, -5.f), false));
-	masses.push_back(Mass(1.f, vec3(0.4f, 4.5f, -5.f), false));
+	masses.push_back(Mass(1.f, vec3(-1.75f, 2.85f, -3.f), true));
+	masses.push_back(Mass(0.1f, vec3(-0.25f, 1.75f, -3.f), false));
+	masses.push_back(Mass(0.5f, vec3(0.25f, 1.f, -3.f), false));
+	masses.push_back(Mass(0.8f, vec3(1.75f, 0.49f, -3.f), false));
 
-    springs.push_back(Spring(&masses[0], &masses[1], 4.f, 1.f));
+    springs.push_back(Spring(&masses[0], &masses[1], 20.f, 0.3f));
+    springs.push_back(Spring(&masses[1], &masses[2], 8.f, 0.5f));
+    springs.push_back(Spring(&masses[2], &masses[3], 10.f, 0.2f));
 
 	Camera cam = Camera(vec3(0, 0, -1), vec3(0, 0, 1));
 	activeCamera = &cam;
@@ -315,12 +320,16 @@ int main(int argc, char *argv[])
 		drawConnection(&points, 1.f);
 		loadBuffer(vbo, points);
 
-        for(int i = 0; i < springs.size(); i++){
+		for(uint i = 0; i < masses.size(); i++){
+			masses[i].Fspring = vec3(0.f);
+		}
+        for(uint i = 0; i < springs.size(); i++){
             vec3 springForce = springs[i].findSpringForce();
             springs[i].mass1->addSpringForce(-1.f * springForce);
             springs[i].mass2->addSpringForce(springForce);
         }
-		for(int i = 0; i < masses.size(); i++){
+		for(uint i = 0; i < masses.size(); i++){
+			cout << i << " : ";
 			masses[i].updatePos();
 		}
 

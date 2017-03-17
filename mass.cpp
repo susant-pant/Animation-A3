@@ -1,19 +1,22 @@
 #include "mass.h"
+#include <iostream>
 
 void Mass::addSpringForce(vec3 springForce) {
-	netForce = springForce;
+	if(!fixed)
+		Fspring += springForce;
 }
 
 void Mass::updatePos() {
 	if(!fixed){
+		vec3 Fgrav = vec3(-0.f, -9.81f, 0.f) * mass;
+		vec3 Fdamp = -velocity * 0.25f;
+		vec3 netForce = Fspring + Fgrav + Fdamp;
+
+		std::cout << Fspring.y << std::endl;
+
 		vec3 accel = (netForce/mass);
-		velocity += (accel + vec3(0.f, -9.81f, 0.f))/60.f;
-		pos += velocity/60.f;
+		velocity += accel/60.f;
+		pos +=	 velocity/60.f;
 	}
-	if (pos.y < -3.95f) pos.y = -3.95f;
+	if (pos.y <= -3.95f) velocity.y = -velocity.y;
 }
-	/*
-	– For each moving spring node -> Compute the internal force neighbor nodes are exerting on this node and add the force to this node’s force vector
-	– For each moving spring node -> Compute the nodes acceleration (a=f/m) and add it to the spring’s velocity, and add the velocity to the spring’s position in space
-	– For each moving spring node -> Compute the energy loss (friction)
-	*/
