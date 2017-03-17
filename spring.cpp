@@ -7,4 +7,6 @@ vec3 Spring::findSpringForce(){
 	vec3 springForce = -stiffness * (springLength - restLength);
 
 	if (!mass1.fixed && !mass2.fixed) springForce /= 2.f;
+
+	return springForce;
 }
