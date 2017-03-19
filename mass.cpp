@@ -14,8 +14,9 @@ void Mass::updatePos() {
 	velocity += accel/60.f;
 	pos +=	 velocity/60.f;
 	
-	if (pos.y <= -3.95f){
-		velocity.y = -velocity.y * 0.85f;
+	if (pos.y < -3.95f) {
 		pos.y = -3.95f;
+		if (bounces) velocity.y = -velocity.y * 0.85f;
+		else velocity.y = 0.f;
 	}
 }
