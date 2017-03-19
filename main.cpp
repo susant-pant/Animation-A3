@@ -40,9 +40,12 @@ string LoadSource(const string &filename);
 GLuint CompileShader(GLenum shaderType, const string &source);
 GLuint LinkProgram(GLuint vertexShader, GLuint fragmentShader);
 
+GLenum drawMode;
+
 vec2 mousePos;
 bool leftmousePressed = false;
 bool rightmousePressed = false;
+int scene = 0;
 
 Camera* activeCamera;
 
@@ -50,24 +53,30 @@ GLFWwindow* window = 0;
 
 mat4 winRatio = mat4(1.f);
 
-vector<Mass> masses;
-vector<Spring> springs;
-
 // --------------------------------------------------------------------------
 // GLFW callback functions
 
 // reports GLFW errors
 void ErrorCallback(int error, const char* description)
 {
-    cout << "GLFW ERROR " << error << ":" << endl;
-    cout << description << endl;
+	cout << "GLFW ERROR " << error << ":" << endl;
+	cout << description << endl;
 }
 
 // handles keyboard input events
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GL_TRUE);
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
+		glfwSetWindowShouldClose(window, GL_TRUE);
+	}
+
+	else if (key == GLFW_KEY_W && action == GLFW_PRESS){
+		if (scene < 3)	scene++;
+	}
+
+	else if (key == GLFW_KEY_S && action == GLFW_PRESS){
+		if (scene > 0)	scene--;
+	}
 }
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -150,8 +159,7 @@ bool initVAO(GLuint vao, const VertexBuffers& vbo)
 
 
 //Loads buffers with data
-bool loadBuffer(const VertexBuffers& vbo,
-				const vector<vec3>& points)
+bool loadBuffer(const VertexBuffers& vbo, const vector<vec3>& points)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo.id[VertexBuffers::VERTICES]);
 	glBufferData(
@@ -210,7 +218,7 @@ void render(GLuint vao, int startElement, int numElements)
 {
 	glBindVertexArray(vao);		//Use the LINES vertex array
 	glDrawArrays(
-			GL_LINES,		//What shape we're drawing	- GL_TRIANGLES, GL_LINES, GL_POINTS, GL_QUADS, GL_TRIANGLE_STRIP
+			drawMode,		//What shape we're drawing	- GL_TRIANGLES, GL_LINES, GL_POINTS, GL_QUADS, GL_TRIANGLE_STRIP
 			startElement,
 			numElements		//How many indices
 			);
@@ -218,8 +226,7 @@ void render(GLuint vao, int startElement, int numElements)
 	CheckGLErrors("render");
 }
 
-void drawConnection(vector<vec3>* vertices, float width)
-{
+void drawConnection(vector<vec3>* vertices, vector<Spring>& springs) {
 	vertices->clear();
 	for(uint i = 0; i < springs.size(); i++){
 		vertices->push_back(springs[i].mass1->pos);
@@ -227,129 +234,197 @@ void drawConnection(vector<vec3>* vertices, float width)
 	}
 }
 
+void drawWeights(vector<vec3>* vertices, vector<Mass>& masses) {
+	vertices->clear();
+	for(uint i =0; i < masses.size(); i++){
+		//first triangle
+		vertices->push_back(vec3(masses[i].pos) + vec3(0.05f, 0.05f, 0.f));
+		vertices->push_back(vec3(masses[i].pos) + vec3(0.05f, -0.05f, 0.f));
+		vertices->push_back(vec3(masses[i].pos) + vec3(-0.05f, 0.05f, 0.f));
+		//second triangle
+		vertices->push_back(vec3(masses[i].pos) + vec3(0.05f, -0.05f, 0.f));
+		vertices->push_back(vec3(masses[i].pos) + vec3(-0.05f, -0.05f, 0.f));
+		vertices->push_back(vec3(masses[i].pos) + vec3(-0.05f, 0.05f, 0.f));
+	}
+}
+
 GLFWwindow* createGLFWWindow()
 {
 	// initialize the GLFW windowing system
-    if (!glfwInit()) {
-        cout << "ERROR: GLFW failed to initialize, TERMINATING" << endl;
-        return NULL;
-    }
-    glfwSetErrorCallback(ErrorCallback);
+	if (!glfwInit()) {
+		cout << "ERROR: GLFW failed to initialize, TERMINATING" << endl;
+		return NULL;
+	}
+	glfwSetErrorCallback(ErrorCallback);
 
-    // attempt to create a window with an OpenGL 4.1 core profile context
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    window = glfwCreateWindow(512, 512, "OpenGL Example", 0, 0);
-    if (!window) {
-        cout << "Program failed to create GLFW window, TERMINATING" << endl;
-        glfwTerminate();
-        return NULL;
-    }
+	// attempt to create a window with an OpenGL 4.1 core profile context
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	window = glfwCreateWindow(1024, 1024, "Animation Assignment 3", 0, 0);
+	if (!window) {
+		cout << "Program failed to create GLFW window, TERMINATING" << endl;
+		glfwTerminate();
+		return NULL;
+	}
 
-    // set keyboard callback function and make our context current (active)
-    glfwSetKeyCallback(window, keyCallback);
-    glfwSetMouseButtonCallback(window, mouseButtonCallback);
-    glfwSetCursorPosCallback(window, mousePosCallback);
-    glfwSetWindowSizeCallback(window, resizeCallback);
-    glfwMakeContextCurrent(window);
+	// set keyboard callback function and make our context current (active)
+	glfwSetKeyCallback(window, keyCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetCursorPosCallback(window, mousePosCallback);
+	glfwSetWindowSizeCallback(window, resizeCallback);
+	glfwMakeContextCurrent(window);
 
-    return window;
+	return window;
 }
 
+void initMassSpring(int currScene, vector<Mass>& masses, vector<Spring>& springs){
+	masses.clear();
+	springs.clear();
 
+	if (currScene == 0) {
+		masses.push_back(Mass(1.f, vec3(0.f, 3.f, -5.f), true));
+		masses.push_back(Mass(1.f, vec3(0.f, -0.5f, -5.f), false));
+
+		springs.push_back(Spring(&masses.at(0), &masses.at(1), 11.f, 0.5f));
+	}
+
+	if (currScene == 1) {
+		masses.push_back(Mass(1.f, vec3(0.f, 2.85f, -5.f), true));
+		masses.push_back(Mass(0.1f, vec3(-0.25f, 1.75f, -5.f), false));
+		masses.push_back(Mass(0.5f, vec3(0.25f, 1.f, -5.f), false));
+		masses.push_back(Mass(0.8f, vec3(1.75f, 0.49f, -5.f), false));
+
+		springs.push_back(Spring(&masses.at(0), &masses.at(1), 20.f, 0.3f));
+		springs.push_back(Spring(&masses.at(1), &masses.at(2), 8.f, 0.5f));
+		springs.push_back(Spring(&masses.at(2), &masses.at(3), 10.f, 0.2f));
+	}
+
+	if (currScene == 2) {
+		int cubeDimension = 5;
+		float cubeLength = 1.5f;
+
+		for (int i = 0; i < cubeDimension; i++){
+			for (int j = 0; j < cubeDimension; j++){
+				for (int k = 0; k < cubeDimension; k++){
+					float xPos = float(i - (0.5 * (cubeDimension - 1))) * cubeLength;
+					float yPos = float(j - (0.5 * (cubeDimension - 1))) * cubeLength + 1.f;
+					float zPos =(float(k - (0.5 * (cubeDimension - 1))) * cubeLength) - 8.f;
+					masses.push_back(Mass(1.f, vec3(xPos, yPos, zPos), false));
+		}	}	}
+
+		for (uint i = 0; i < masses.size(); i++) {
+			for (uint j = i + 1; j < masses.size(); j++) {
+				float dist = masses.at(i).findDistTo(masses.at(j));
+				if (dist <= sqrt(3 * (cubeLength * cubeLength))) {
+					for (int k = 0; k < cubeDimension + 1; k++) {
+						springs.push_back(Spring(&masses.at(i), &masses.at(j), float(cubeDimension) * 8, cubeLength + 0.5f));
+					}
+				}
+		}	}
+	}
+}
 
 // ==========================================================================
 // PROGRAM ENTRY POINT
 
-int main(int argc, char *argv[])
-{
-    window = createGLFWWindow();
-    if(window == NULL)
-    	return -1;
+int main(int argc, char *argv[]) {
+	window = createGLFWWindow();
+	if(window == NULL)
+		return -1;
 
-    //Initialize glad
-    if (!gladLoadGL())
+	//Initialize glad
+	if (!gladLoadGL())
 	{
 		cout << "GLAD init failed" << endl;
 		return -1;
 	}
 
-    // query and print out information about our OpenGL environment
-    QueryGLVersion();
+	// query and print out information about our OpenGL environment
+	QueryGLVersion();
 
 	initGL();
 
 	//Initialize shader
 	GLuint program = initShader("vertex.glsl", "fragment.glsl");
 
-	GLuint vao;
-	VertexBuffers vbo;
-
+	GLuint vaoSprings;
+	VertexBuffers vboSprings;
 	//Generate object ids
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(VertexBuffers::COUNT, vbo.id);
+	glGenVertexArrays(1, &vaoSprings);
+	glGenBuffers(VertexBuffers::COUNT, vboSprings.id);
+	initVAO(vaoSprings, vboSprings);
 
-	initVAO(vao, vbo);
+	GLuint vaoMasses;
+	VertexBuffers vboMasses;
+	glGenVertexArrays(1, &vaoMasses);
+	glGenBuffers(VertexBuffers::COUNT, vboMasses.id);
+	initVAO(vaoMasses, vboMasses);
 
 	//Geometry information
 	vector<vec3> points;
+	vector<vec3> trings;
 
-	masses.push_back(Mass(1.f, vec3(-1.75f, 2.85f, -3.f), true));
-	masses.push_back(Mass(0.1f, vec3(-0.25f, 1.75f, -3.f), false));
-	masses.push_back(Mass(0.5f, vec3(0.25f, 1.f, -3.f), false));
-	masses.push_back(Mass(0.8f, vec3(1.75f, 0.49f, -3.f), false));
+	vector<Mass> masses;
+	vector<Spring> springs;
 
-    springs.push_back(Spring(&masses[0], &masses[1], 20.f, 0.3f));
-    springs.push_back(Spring(&masses[1], &masses[2], 8.f, 0.5f));
-    springs.push_back(Spring(&masses[2], &masses[3], 10.f, 0.2f));
+	int currScene = scene;
+	cout << "Now on Scene: " << scene + 1 << " of 4" << endl;
+	initMassSpring(currScene, masses, springs);
 
 	Camera cam = Camera(vec3(0, 0, -1), vec3(0, 0, 1));
 	activeCamera = &cam;
 	//float fovy, float aspect, float zNear, float zFar
 	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 1.f, 20.f);
 
-    // run an event-triggered main loop
-    while (!glfwWindowShouldClose(window))
-    {
+	// run an event-triggered main loop
+	while (!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		//Clear color and depth buffers (Haven't covered yet)
-
 		glUseProgram(program);
 
-		drawConnection(&points, 1.f);
-		loadBuffer(vbo, points);
+		if (currScene != scene) {
+			currScene = scene;
+			initMassSpring(currScene, masses, springs);
+		}
+
+		drawConnection(&points, springs);
+		loadBuffer(vboSprings, points);
+		drawWeights(&trings, masses);
+		loadBuffer(vboMasses, trings);
+
+		loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
+
+		// call function to draw our scene
+		drawMode = GL_LINES;
+		render(vaoSprings, 0, points.size());
+		drawMode = GL_TRIANGLES;
+		render(vaoMasses, 0, trings.size());
 
 		for(uint i = 0; i < masses.size(); i++){
 			masses[i].Fspring = vec3(0.f);
 		}
-        for(uint i = 0; i < springs.size(); i++){
-            vec3 springForce = springs[i].findSpringForce();
-            springs[i].mass1->addSpringForce(-1.f * springForce);
-            springs[i].mass2->addSpringForce(springForce);
-        }
+		for(uint i = 0; i < springs.size(); i++){
+			vec3 springForce = springs[i].findSpringForce();
+			if (!springs[i].mass1->fixed)	springs[i].mass1->Fspring += -1.f * springForce;
+			if (!springs[i].mass2->fixed)	springs[i].mass2->Fspring += springForce;
+		}
 		for(uint i = 0; i < masses.size(); i++){
-			cout << i << " : ";
-			masses[i].updatePos();
+			if (!masses[i].fixed)	masses[i].updatePos();
 		}
 
-		loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
-
-        // call function to draw our scene
-        render(vao, 0, points.size());
-
-        // scene is rendered to the back buffer, so swap to front for display
-        glfwSwapBuffers(window);
-
-        // sleep until next event before drawing again
-        glfwPollEvents();
+		// scene is rendered to the back buffer, so swap to front for display
+		glfwSwapBuffers(window);
+		// sleep until next event before drawing again
+		glfwPollEvents();
 	}
 
 	// clean up allocated resources before exit
-	glDeleteVertexArrays(1, &vao);
-	glDeleteBuffers(VertexBuffers::COUNT, vbo.id);
+	glDeleteVertexArrays(1, &vaoSprings);
+	glDeleteBuffers(VertexBuffers::COUNT, vboSprings.id);
+	glDeleteVertexArrays(1, &vaoMasses);
+	glDeleteBuffers(VertexBuffers::COUNT, vboMasses.id);
 	glDeleteProgram(program);
-
 
 	glfwDestroyWindow(window);
    glfwTerminate();
@@ -365,39 +440,39 @@ int main(int argc, char *argv[])
 
 void QueryGLVersion()
 {
-    // query opengl version and renderer information
-    string version  = reinterpret_cast<const char *>(glGetString(GL_VERSION));
-    string glslver  = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
-    string renderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
+	// query opengl version and renderer information
+	string version  = reinterpret_cast<const char *>(glGetString(GL_VERSION));
+	string glslver  = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+	string renderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
 
-    cout << "OpenGL [ " << version << " ] "
-         << "with GLSL [ " << glslver << " ] "
-         << "on renderer [ " << renderer << " ]" << endl;
+	cout << "OpenGL [ " << version << " ] "
+		 << "with GLSL [ " << glslver << " ] "
+		 << "on renderer [ " << renderer << " ]" << endl;
 }
 
 bool CheckGLErrors(string location)
 {
-    bool error = false;
-    for (GLenum flag = glGetError(); flag != GL_NO_ERROR; flag = glGetError())
-    {
-        cout << "OpenGL ERROR:  ";
-        switch (flag) {
-        case GL_INVALID_ENUM:
-            cout << location << ": " << "GL_INVALID_ENUM" << endl; break;
-        case GL_INVALID_VALUE:
-            cout << location << ": " << "GL_INVALID_VALUE" << endl; break;
-        case GL_INVALID_OPERATION:
-            cout << location << ": " << "GL_INVALID_OPERATION" << endl; break;
-        case GL_INVALID_FRAMEBUFFER_OPERATION:
-            cout << location << ": " << "GL_INVALID_FRAMEBUFFER_OPERATION" << endl; break;
-        case GL_OUT_OF_MEMORY:
-            cout << location << ": " << "GL_OUT_OF_MEMORY" << endl; break;
-        default:
-            cout << "[unknown error code]" << endl;
-        }
-        error = true;
-    }
-    return error;
+	bool error = false;
+	for (GLenum flag = glGetError(); flag != GL_NO_ERROR; flag = glGetError())
+	{
+		cout << "OpenGL ERROR:  ";
+		switch (flag) {
+		case GL_INVALID_ENUM:
+			cout << location << ": " << "GL_INVALID_ENUM" << endl; break;
+		case GL_INVALID_VALUE:
+			cout << location << ": " << "GL_INVALID_VALUE" << endl; break;
+		case GL_INVALID_OPERATION:
+			cout << location << ": " << "GL_INVALID_OPERATION" << endl; break;
+		case GL_INVALID_FRAMEBUFFER_OPERATION:
+			cout << location << ": " << "GL_INVALID_FRAMEBUFFER_OPERATION" << endl; break;
+		case GL_OUT_OF_MEMORY:
+			cout << location << ": " << "GL_OUT_OF_MEMORY" << endl; break;
+		default:
+			cout << "[unknown error code]" << endl;
+		}
+		error = true;
+	}
+	return error;
 }
 
 // --------------------------------------------------------------------------
@@ -406,77 +481,77 @@ bool CheckGLErrors(string location)
 // reads a text file with the given name into a string
 string LoadSource(const string &filename)
 {
-    string source;
+	string source;
 
-    ifstream input(filename.c_str());
-    if (input) {
-        copy(istreambuf_iterator<char>(input),
-             istreambuf_iterator<char>(),
-             back_inserter(source));
-        input.close();
-    }
-    else {
-        cout << "ERROR: Could not load shader source from file " << filename << endl;
-    }
+	ifstream input(filename.c_str());
+	if (input) {
+		copy(istreambuf_iterator<char>(input),
+			 istreambuf_iterator<char>(),
+			 back_inserter(source));
+		input.close();
+	}
+	else {
+		cout << "ERROR: Could not load shader source from file " << filename << endl;
+	}
 
-    return source;
+	return source;
 }
 
 // creates and returns a shader object compiled from the given source
 GLuint CompileShader(GLenum shaderType, const string &source)
 {
-    // allocate shader object name
-    GLuint shaderObject = glCreateShader(shaderType);
+	// allocate shader object name
+	GLuint shaderObject = glCreateShader(shaderType);
 
-    // try compiling the source as a shader of the given type
-    const GLchar *source_ptr = source.c_str();
-    glShaderSource(shaderObject, 1, &source_ptr, 0);
-    glCompileShader(shaderObject);
+	// try compiling the source as a shader of the given type
+	const GLchar *source_ptr = source.c_str();
+	glShaderSource(shaderObject, 1, &source_ptr, 0);
+	glCompileShader(shaderObject);
 
-    // retrieve compile status
-    GLint status;
-    glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &status);
-    if (status == GL_FALSE)
-    {
-        GLint length;
-        glGetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &length);
-        string info(length, ' ');
-        glGetShaderInfoLog(shaderObject, info.length(), &length, &info[0]);
-        cout << "ERROR compiling shader:" << endl;
-        cout << source << endl;
-        cout << info << endl;
-    }
+	// retrieve compile status
+	GLint status;
+	glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &status);
+	if (status == GL_FALSE)
+	{
+		GLint length;
+		glGetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &length);
+		string info(length, ' ');
+		glGetShaderInfoLog(shaderObject, info.length(), &length, &info[0]);
+		cout << "ERROR compiling shader:" << endl;
+		cout << source << endl;
+		cout << info << endl;
+	}
 
-    return shaderObject;
+	return shaderObject;
 }
 
 // creates and returns a program object linked from vertex and fragment shaders
 GLuint LinkProgram(GLuint vertexShader, GLuint fragmentShader)
 {
-    // allocate program object name
-    GLuint programObject = glCreateProgram();
+	// allocate program object name
+	GLuint programObject = glCreateProgram();
 
-    // attach provided shader objects to this program
-    if (vertexShader)   glAttachShader(programObject, vertexShader);
-    if (fragmentShader) glAttachShader(programObject, fragmentShader);
+	// attach provided shader objects to this program
+	if (vertexShader)   glAttachShader(programObject, vertexShader);
+	if (fragmentShader) glAttachShader(programObject, fragmentShader);
 
-    // try linking the program with given attachments
-    glLinkProgram(programObject);
+	// try linking the program with given attachments
+	glLinkProgram(programObject);
 
-    // retrieve link status
-    GLint status;
-    glGetProgramiv(programObject, GL_LINK_STATUS, &status);
-    if (status == GL_FALSE)
-    {
-        GLint length;
-        glGetProgramiv(programObject, GL_INFO_LOG_LENGTH, &length);
-        string info(length, ' ');
-        glGetProgramInfoLog(programObject, info.length(), &length, &info[0]);
-        cout << "ERROR linking shader program:" << endl;
-        cout << info << endl;
-    }
+	// retrieve link status
+	GLint status;
+	glGetProgramiv(programObject, GL_LINK_STATUS, &status);
+	if (status == GL_FALSE)
+	{
+		GLint length;
+		glGetProgramiv(programObject, GL_INFO_LOG_LENGTH, &length);
+		string info(length, ' ');
+		glGetProgramInfoLog(programObject, info.length(), &length, &info[0]);
+		cout << "ERROR linking shader program:" << endl;
+		cout << info << endl;
+	}
 
-    return programObject;
+	return programObject;
 }
 
 
