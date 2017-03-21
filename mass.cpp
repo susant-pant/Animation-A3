@@ -12,7 +12,6 @@ void Mass::updatePos() {
 
 	vec3 accel = (netForce/mass);
 	velocity += accel/60.f;
-	if(isCloth && velocity.y > 0.f) velocity.y = 0.f;
 	pos +=	 velocity/60.f;
 	
 	if (pos.y < -3.95f) {
