@@ -318,14 +318,14 @@ void initMassSpring(int currScene, vector<Mass>& masses, vector<Spring>& springs
 			for (uint j = i + 1; j < masses.size(); j++) {
 				float dist = masses.at(i).findDistTo(masses.at(j));
 				if (dist <= sqrt(3.f * (unitLength * unitLength))) {
-					springs.push_back(Spring(&masses.at(i), &masses.at(j), float(cubeDimension * cubeDimension) * 20, dist));
+					springs.push_back(Spring(&masses.at(i), &masses.at(j), float(cubeDimension * cubeDimension) * 20.f, dist));
 				}
 		}	}
 	}
 
 	if (currScene == 3) {
-		int xDimension = 24;
-		int yDimension = 14;
+		int xDimension = 28;
+		int yDimension = 8;
 		float unitLength = 0.3f;
 		float curtainMass = 0.07f;
 
@@ -334,9 +334,9 @@ void initMassSpring(int currScene, vector<Mass>& masses, vector<Spring>& springs
 				float xPos = float(x - (0.5 * (xDimension - 1))) * unitLength;
 				float yPos = float(y - (0.5 * (yDimension - 1))) * unitLength + 1.5f;
 				if (y == yDimension - 1) {
-					masses.push_back(Mass(1.f, vec3(xPos, yPos, sin(float(x)) - 6.f - yPos), true, true));
+					masses.push_back(Mass(1.f, vec3(xPos, yPos, -6.f +sin(float(x))-yPos), true, true));
 				} else {
-					masses.push_back(Mass(curtainMass, vec3(xPos, yPos, sin(float(x)) - 6.f), false, true));
+					masses.push_back(Mass(curtainMass, vec3(xPos, yPos, -6.f), false, true));
 				}
 			}
 		}
@@ -344,13 +344,13 @@ void initMassSpring(int currScene, vector<Mass>& masses, vector<Spring>& springs
 		for (int x = 0; x < xDimension; x++) {
 			for (int y = 0; y < yDimension - 1; y++) {
 				int massIndex = x*yDimension + y;
-				springs.push_back(Spring(&masses.at(massIndex), &masses.at(massIndex + 1), 30.6f, unitLength));
+				springs.push_back(Spring(&masses.at(massIndex), &masses.at(massIndex + 1), 10.6f, unitLength));
 			}
 		}
 
 		for (int i = 0; i < yDimension; i++) {
 			for (int j = 0; j < xDimension - 1; j++) {
-				springs.push_back(Spring(&masses.at(i + (j*yDimension)), &masses.at(i + ((j + 1) * yDimension)), 5.6f, unitLength));
+				springs.push_back(Spring(&masses.at(i + (j*yDimension)), &masses.at(i + ((j + 1) * yDimension)), 10.6f, unitLength));
 			}
 		}
 	}
@@ -408,6 +408,8 @@ int main(int argc, char *argv[]) {
 	//float fovy, float aspect, float zNear, float zFar
 	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 1.f, 20.f);
 
+	float time = 0.f;
+
 	// run an event-triggered main loop
 	while (!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		//Clear color and depth buffers (Haven't covered yet)
@@ -441,8 +443,10 @@ int main(int argc, char *argv[]) {
 			if (!springs[i].mass2->fixed)	springs[i].mass2->Fspring += springForce;
 		}
 		for(uint i = 0; i < masses.size(); i++){
-			if (!masses[i].fixed)	masses[i].updatePos();
+			if (!masses[i].fixed)	masses[i].updatePos(time);
 		}
+
+		time += 0.0167f;
 
 		// scene is rendered to the back buffer, so swap to front for display
 		glfwSwapBuffers(window);
