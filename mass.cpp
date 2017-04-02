@@ -23,8 +23,8 @@ void Mass::updatePos(float time) {
 	vec3 netForce = Fspring + Fgrav + Fdamp + Fwind;
 
 	vec3 accel = (netForce/mass);
-	velocity += accel/60.f;
-	pos +=	 velocity/60.f;
+	velocity += accel/120.f;
+	pos +=	 velocity/120.f;
 	
 	if (pos.y < -3.95f) {
 		pos.y = -3.95f;

@@ -324,17 +324,17 @@ void initMassSpring(int currScene, vector<Mass>& masses, vector<Spring>& springs
 	}
 
 	if (currScene == 3) {
-		int xDimension = 28;
-		int yDimension = 8;
-		float unitLength = 0.3f;
+		int xDimension = 85;
+		int yDimension = 12;
+		float unitLength = 0.1f;
 		float curtainMass = 0.07f;
 
 		for (int x = 0; x < xDimension; x++) {
 			for (int y = 0; y < yDimension; y++) {
 				float xPos = float(x - (0.5 * (xDimension - 1))) * unitLength;
 				float yPos = float(y - (0.5 * (yDimension - 1))) * unitLength + 1.5f;
-				if (y == yDimension - 1) {
-					masses.push_back(Mass(1.f, vec3(xPos, yPos, -6.f +sin(float(x))-yPos), true, true));
+				if (y == yDimension - 1 && (x%4 == 0)) {
+					masses.push_back(Mass(1.f, vec3(xPos, yPos, -6.f /*+sin(float(x))-yPos*/), true, true));
 				} else {
 					masses.push_back(Mass(curtainMass, vec3(xPos, yPos, -6.f), false, true));
 				}
@@ -344,13 +344,13 @@ void initMassSpring(int currScene, vector<Mass>& masses, vector<Spring>& springs
 		for (int x = 0; x < xDimension; x++) {
 			for (int y = 0; y < yDimension - 1; y++) {
 				int massIndex = x*yDimension + y;
-				springs.push_back(Spring(&masses.at(massIndex), &masses.at(massIndex + 1), 10.6f, unitLength));
+				springs.push_back(Spring(&masses.at(massIndex), &masses.at(massIndex + 1), 30.6f, unitLength));
 			}
 		}
 
 		for (int i = 0; i < yDimension; i++) {
 			for (int j = 0; j < xDimension - 1; j++) {
-				springs.push_back(Spring(&masses.at(i + (j*yDimension)), &masses.at(i + ((j + 1) * yDimension)), 10.6f, unitLength));
+				springs.push_back(Spring(&masses.at(i + (j*yDimension)), &masses.at(i + ((j + 1) * yDimension)), 30.6f, unitLength));
 			}
 		}
 	}
