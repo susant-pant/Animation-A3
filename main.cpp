@@ -51,8 +51,6 @@ Camera cam;
 
 GLFWwindow* window = 0;
 
-mat4 winRatio = mat4(1.f);
-
 // --------------------------------------------------------------------------
 // GLFW callback functions
 
