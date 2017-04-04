@@ -47,7 +47,7 @@ bool leftmousePressed = false;
 bool rightmousePressed = false;
 int scene = 0;
 
-Camera* activeCamera;
+Camera cam;
 
 GLFWwindow* window = 0;
 
@@ -63,30 +63,46 @@ void ErrorCallback(int error, const char* description)
 	cout << description << endl;
 }
 
+bool wPressed = false;
+bool sPressed = false;
+bool dPressed = false;
+bool aPressed = false;
+bool ePressed = false;
+bool qPressed = false;
+
 // handles keyboard input events
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
-
-	else if (key == GLFW_KEY_W && action == GLFW_PRESS){
+	else if (key == GLFW_KEY_UP && action == GLFW_PRESS){
 		if (scene < 3)	scene++;
 	}
-
-	else if (key == GLFW_KEY_S && action == GLFW_PRESS){
+	else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS){
 		if (scene > 0)	scene--;
 	}
+
+	if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		wPressed = !wPressed;
+	else if(key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		sPressed = !sPressed;
+	else if(key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		dPressed = !dPressed;
+	else if(key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		aPressed = !aPressed;
+	else if(key == GLFW_KEY_E && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		ePressed = !ePressed;
+	else if(key == GLFW_KEY_Q && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		qPressed = !qPressed;
 }
+
+bool mousePressed = false;
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
-	if( (action == GLFW_PRESS) || (action == GLFW_RELEASE) ){
-		if(button == GLFW_MOUSE_BUTTON_LEFT)
-			leftmousePressed = !leftmousePressed;
-		else if(button == GLFW_MOUSE_BUTTON_RIGHT)
-			rightmousePressed = !rightmousePressed;
-	}
+	if( (action == GLFW_PRESS) || (action == GLFW_RELEASE) )
+		mousePressed = !mousePressed;
 }
 
 void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
@@ -95,32 +111,18 @@ void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
 	glGetIntegerv(GL_VIEWPORT, vp);
 
 	vec2 newPos = vec2(xpos/(double)vp[2], -ypos/(double)vp[3])*2.f - vec2(1.f);
-
 	vec2 diff = newPos - mousePos;
-	if(leftmousePressed){
-		activeCamera->trackballRight(-diff.x);
-		activeCamera->trackballUp(-diff.y);
-	}
-	else if(rightmousePressed){
-		float zoomBase = (diff.y > 0) ? 1.f/2.f : 2.f;
 
-		activeCamera->zoom(pow(zoomBase, abs(diff.y)));
-	}
+	if(mousePressed)
+		cam.cameraRotation(-diff.x, diff.y);
 
 	mousePos = newPos;
 }
 
 void resizeCallback(GLFWwindow* window, int width, int height)
 {
-	int vp[4];
-	glGetIntegerv(GL_VIEWPORT, vp);
-
 	glViewport(0, 0, width, height);
 
-	float minDim = float(std::min(width, height));
-
-	winRatio[0][0] = minDim/float(width);
-	winRatio[1][1] = minDim/float(height);
 }
 
 //==========================================================================
@@ -196,9 +198,16 @@ void initGL()
 	glClearColor(0.f, 0.f, 0.f, 0.f);		//Color to clear the screen with (R, G, B, Alpha)
 }
 
-bool loadUniforms(GLuint program, mat4 perspective, mat4 modelview)
+bool loadUniforms(Camera* cam, GLuint program, mat4 perspective, mat4 modelview)
 {
 	glUseProgram(program);
+
+	mat4 camMatrix = cam->getMatrix();
+
+	glUniformMatrix4fv(glGetUniformLocation(program, "cameraMatrix"),
+						1,
+						false,
+						&camMatrix[0][0]);
 
 	glUniformMatrix4fv(glGetUniformLocation(program, "modelviewMatrix"),
 						1,
@@ -403,10 +412,9 @@ int main(int argc, char *argv[]) {
 	cout << "Now on Scene: " << scene + 1 << " of 4" << endl;
 	initMassSpring(currScene, masses, springs);
 
-	Camera cam = Camera(vec3(0, 0, -1), vec3(0, 0, 1));
-	activeCamera = &cam;
+	cam = Camera(vec3(0, -1, -1), vec3(0, 1.f, 0));
 	//float fovy, float aspect, float zNear, float zFar
-	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 1.f, 20.f);
+	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 20.f);
 
 	float time = 0.f;
 
@@ -426,7 +434,16 @@ int main(int argc, char *argv[]) {
 		drawWeights(&trings, masses);
 		loadBuffer(vboMasses, trings);
 
-		loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
+		float move = 0.05f;
+		if (wPressed) cam.pos += cam.dir*move;
+		if (sPressed) cam.pos -= cam.dir*move;
+		if (dPressed) cam.pos += cam.right*move;
+		if (aPressed) cam.pos -= cam.right*move;
+		if (ePressed) cam.pos += cam.up*move;
+		if (qPressed) cam.pos -= cam.up*move;
+
+
+		loadUniforms(&cam, program, perspectiveMatrix, mat4(1.f));
 
 		// call function to draw our scene
 		drawMode = GL_LINES;
@@ -462,7 +479,7 @@ int main(int argc, char *argv[]) {
 	glDeleteProgram(program);
 
 	glfwDestroyWindow(window);
-   glfwTerminate();
+	glfwTerminate();
 
    return 0;
 }

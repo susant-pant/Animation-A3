@@ -1,4 +1,5 @@
 #include "camera.h"
+#include <cstdio>
 
 mat4 rotateAbout(vec3 axis, float radians)
 {
@@ -19,38 +20,24 @@ mat4 rotateAbout(vec3 axis, float radians)
 	return matrix;
 }
 
-void Camera::trackballUp(float radians)
+Camera::Camera():	dir(vec3(0, 0, -1)), 
+					right(vec3(1, 0, 0)), 
+					up(vec3(0, 1, 0)),
+					pos(vec3(0, 0, 0))
+{}
+
+Camera::Camera(vec3 _dir, vec3 _pos):dir(normalize(_dir)), pos(_pos)
 {
-	mat4 rotation = rotateAbout(right, -radians);
-
-	vec4 newPos = rotation*vec4(pos, 1);
-	pos = vec3(newPos.x, newPos.y, newPos.z);
-
-	vec4 newUp = rotation*vec4(up, 1);
-	up = normalize(vec3(newUp.x, newUp.y, newUp.z));
-
-	vec4 newDir = rotation*vec4(dir, 1);
-	dir = normalize(vec3(newDir.x, newDir.y, newDir.z));
+	right = normalize(cross(_dir, vec3(0, 1, 0)));
+	up =  normalize(cross(right, _dir));
 }
 
-void Camera::trackballRight(float radians)
-{
-	mat4 rotation = rotateAbout(up, radians);
-
-	vec4 newPos = rotation*vec4(pos, 1);
-	pos = vec3(newPos.x, newPos.y, newPos.z);
-
-	vec4 newRight = rotation*vec4(right, 1);
-	right = normalize(vec3(newRight.x, newRight.y, newRight.z));
-
-	vec4 newDir = rotation*vec4(dir, 1);
-	dir = normalize(vec3(newDir.x, newDir.y, newDir.z));
-}
-
-void Camera::zoom(float factor)
-{
-	pos = -dir*length(pos)*factor;
-}
+/*
+	[ Right 0 ]
+	[ Up 	0 ]
+	[ -Dir	0 ]
+	[ 0 0 0 1 ]
+*/
 
 mat4 Camera::getMatrix()
 {
@@ -68,3 +55,28 @@ mat4 Camera::getMatrix()
 
 	return transpose(cameraRotation)*translation;
 }
+
+
+void Camera::cameraRotation(float x, float y)
+{
+	mat4 rotateAroundY = rotateAbout(vec3(0, 1, 0), x);
+	mat4 rotateAroundX = rotateAbout(right, y);
+
+	dir = normalize(
+			rotateAroundX*rotateAroundY*vec4(dir, 0)
+			);
+
+	right = normalize(cross(dir, vec3(0, 1, 0)));
+	up =  normalize(cross(right, dir));
+}
+
+
+
+
+
+
+
+
+
+
+
